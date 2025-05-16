@@ -503,7 +503,7 @@ public class GR5xxxDFU2: DfuProfile2{
             listener?.dfuProgress(msg: msg, progress: progress);
         }
     }
-    public func updateFirmware(dfuData:Data, isCopyMode:Bool, copyAddress:UInt32, isFastMode:Bool=false, listener:DfuListener?=nil, ctrlCmd:Data?=nil, reconnectScanFilter:ScanFilter?=nil)throws{
+    public func updateFirmware(dfuData:Data, isCopyMode:Bool, copyAddress:UInt32 = 0, isFastMode:Bool=false, listener:DfuListener?=nil, ctrlCmd:Data?=nil, reconnectScanFilter:ScanFilter?=nil)throws{
         let db: DfuDatabase = DfuDatabase()
         if !isCopyMode{
             db.dfuMode = 0
@@ -557,6 +557,16 @@ public class GR5xxxDFU2: DfuProfile2{
             db.commendSaveAddress = getExtraInfoRes.commendSaveAddress
             db.appInfo = getExtraInfoRes.appInfo
             
+            if getExtraInfoRes.commendSaveAddress == 0 {
+                DispatchQueue.main.async {
+                    listener?.dfuStopWithError(errorMsg: "Dfu server commendSaveAddress == 0");
+                }
+                throw ErrorMsg.error(msg: "Dfu server commendSaveAddress == 0")
+            }
+            // 升级固件flash 内存地址从 dfu服务直接拿，不在外部读取。
+            if isCopyMode {
+                db.address =  getExtraInfoRes.commendSaveAddress
+            }
             //覆盖检查
             progress(listener, "Checking memory coverage...", 0)
             try checkOverlapNew(db: db)

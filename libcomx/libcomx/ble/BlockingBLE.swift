@@ -138,6 +138,36 @@ open class BlockingBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate
             return nil
         }
     }
+    //根据UUID 来连接外设。 不要直接传CBPeripheral，隔离DXToy CBCentralManager 与   DFU CBCentralManager
+    public func retrievePeripherals(targetDevice:UUID) throws{
+        if let bleManager = self.central{
+            if let prvDev = self.targetDevice {
+                if prvDev.delegate === self {
+                    prvDev.delegate = nil;
+                }
+            }
+            guard let peripheral = bleManager.retrievePeripherals(withIdentifiers: [targetDevice]).first else {
+                throw BlockingBleError.OtherError(msg: "connectPeripheral: retrievePeripherals failed.")
+            }
+            self.targetDevice = peripheral
+            self.targetDevice!.delegate = self
+            if peripheral.state != .connected {
+                bleManager.connect(peripheral)
+                //等待信号，超时时间3000毫秒
+                let res = try result.waitResult(targetCodes: [Result.CONNECTED], timeout: 3000)
+                if res.resultCode == Result.CONNECTED{
+                    if res.resultSuccess{
+                        return
+                    }else{
+                        throw BlockingBleError.OtherError(msg: "connectPeripheral: Connecting device failed.")
+                    }
+                }
+            }
+        }else{
+            throw BlockingBleError.OtherError(msg: "connectPeripheral: Parameter(CBCentralManager) is nil.")
+        }
+    }
+    
     //连接
     public func connectPeripheral(targetDevice:CBPeripheral?)throws{
         if let bleManager = self.central{

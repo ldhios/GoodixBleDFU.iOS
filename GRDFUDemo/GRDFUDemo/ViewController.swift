@@ -262,41 +262,45 @@ class ViewController: UIViewController, SimpleBleScannerProtocol, UIDocumentBrow
         easyDfu2.setFastMode(isFastMode: self.mEasyDfuFastModeButton.isSelected)
         easyDfu2.setLogListener(listener: self)
 
-        if 1001 == sender.tag{ //startDfu
-            easyDfu2.startDfu(central: mBleManager, target: mSelectedDevice!, dfuData: mSelectedFileData!)
-        }else if 1002 == sender.tag{ //startDfuInCopyMode
-            if let copyAddr = self.mAddressEditView.text{
-                if let address = UInt32(copyAddr, radix:16){
-                    easyDfu2.startDfuInCopyMode(central: mBleManager, target: mSelectedDevice!, dfuData: mSelectedFileData!, copyAddr: address)
-                    print("start copy dfu...")
-                }else{
-                    showStatusTextToast(text:"input valid copy address")
-                }
-            }
-        }else if 1003 == sender.tag{ //startUpdateResource
-            if let address_str = self.mAddressEditView.text{
-                if let address = UInt32(address_str, radix:16){
-                    let isTargetExternFlash = mExtFlashCheckButton.isSelected
-                    easyDfu2.startResourceUpdate(central: mBleManager, target: mSelectedDevice!, dfuData: mSelectedFileData!, extFlash: isTargetExternFlash, startAddr: address)
-                    print("start resource update...")
-                }else{
-                    showStatusTextToast(text:"input valid write address")
-                }
-            }
-        }else if 1004 == sender.tag{ //startDfuWithDfuBoot
-            //因为重连之后才会调用onDFUStart，这里提前禁止界面操作，体验会更好
-            disableAllViews(disable: true, butExceptCanncelButton: true)
-            
-            //警告：因IOS不能取得蓝牙地址，所以重连时是依据DFU BOOT模式时的设备名，这里是不可靠的。
-            easyDfu2.setReconnectScanFilter { peripheral, advertisementData, rssi in
-                if peripheral.name == "Goodix_DFU"{
-                    return true
-                }else{
-                    return false
-                }
-            }
-            easyDfu2.startDfuWithDfuBoot(central: mBleManager, target: mSelectedDevice!, dfuData: mSelectedFileData!)
+//        if 1001 == sender.tag{ //startDfu
+//            easyDfu2.startDfu(central: mBleManager, target: mSelectedDevice!, dfuData: mSelectedFileData!)
+//        }else
+        if 1002 == sender.tag{ //startDfuInCopyMode
+            easyDfu2.startDfuInCopyMode(peripheralUUID: mSelectedDevice!.identifier, dfuData: mSelectedFileData!)
+            print("start copy dfu...")
+//            if let copyAddr = self.mAddressEditView.text{
+//                if let address = UInt32(copyAddr, radix:16){
+//                    easyDfu2.startDfuInCopyMode(peripheralUUID: mSelectedDevice!.identifier, dfuData: mSelectedFileData!)
+//                    print("start copy dfu...")
+//                }else{
+//                    showStatusTextToast(text:"input valid copy address")
+//                }
+//            }
         }
+//        else if 1003 == sender.tag{ //startUpdateResource
+//            if let address_str = self.mAddressEditView.text{
+//                if let address = UInt32(address_str, radix:16){
+//                    let isTargetExternFlash = mExtFlashCheckButton.isSelected
+//                    easyDfu2.startResourceUpdate(central: mBleManager, target: mSelectedDevice!, dfuData: mSelectedFileData!, extFlash: isTargetExternFlash, startAddr: address)
+//                    print("start resource update...")
+//                }else{
+//                    showStatusTextToast(text:"input valid write address")
+//                }
+//            }
+//        }else if 1004 == sender.tag{ //startDfuWithDfuBoot
+//            //因为重连之后才会调用onDFUStart，这里提前禁止界面操作，体验会更好
+//            disableAllViews(disable: true, butExceptCanncelButton: true)
+//            
+//            //警告：因IOS不能取得蓝牙地址，所以重连时是依据DFU BOOT模式时的设备名，这里是不可靠的。
+//            easyDfu2.setReconnectScanFilter { peripheral, advertisementData, rssi in
+//                if peripheral.name == "Goodix_DFU"{
+//                    return true
+//                }else{
+//                    return false
+//                }
+//            }
+//            easyDfu2.startDfuWithDfuBoot(central: mBleManager, target: mSelectedDevice!, dfuData: mSelectedFileData!)
+//        }
     }
     
     @IBAction func fastDfuButtonClicked(_ sender: UIButton) {
@@ -372,6 +376,7 @@ class ViewController: UIViewController, SimpleBleScannerProtocol, UIDocumentBrow
     func onSelectedPeripheral(_ sender: SimpleBleScannerVC, _ peripheral: CBPeripheral, _ name: String) {
         mSelectedDevice = peripheral
         mDeviewName.text = name
+        mBleManager.connect(peripheral)
     }
     
     func documentBrowser(_ controller: UIDocumentBrowserViewController, didPickDocumentsAt documentURLs: [URL]) {

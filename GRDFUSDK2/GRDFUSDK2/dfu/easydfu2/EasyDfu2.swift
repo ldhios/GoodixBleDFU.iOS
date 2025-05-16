@@ -61,56 +61,26 @@ public class EasyDfu2{
     }
 
     //接口函数
-    public func startDfu(central:CBCentralManager?, target: CBPeripheral, dfuData:Data){
-        launchDfu(central: central, targetDevice: target, dfuMode: 0, dfuData: dfuData, address: 0, isExtFlash: false)
+   
+    public func startDfuInCopyMode(peripheralUUID: UUID, dfuData:Data){
+        launchDfu(peripheralUUID: peripheralUUID,  dfuData: dfuData)
     }
-    public func startDfuInCopyMode(central:CBCentralManager?, target: CBPeripheral, dfuData:Data, copyAddr:UInt32){
-        launchDfu(central: central, targetDevice: target, dfuMode: 1, dfuData: dfuData, address: copyAddr, isExtFlash: false)
-    }
-    public func startResourceUpdate(central:CBCentralManager?, target: CBPeripheral, dfuData:Data, extFlash:Bool, startAddr:UInt32){
-        launchDfu(central: central, targetDevice: target, dfuMode: 2, dfuData: dfuData, address: startAddr, isExtFlash: extFlash)
-    }
-    public func startDfuWithDfuBoot(central:CBCentralManager?, target: CBPeripheral, dfuData:Data){
-        launchDfu(central: central, targetDevice: target, dfuMode: 3, dfuData: dfuData, address: 0, isExtFlash: false)
-    }
+ 
 
     //dfu任务
-    private func launchDfu(central:CBCentralManager?, targetDevice: CBPeripheral, dfuMode:Int, dfuData:Data,address:UInt32, isExtFlash:Bool){
+    private func launchDfu(peripheralUUID: UUID, dfuData:Data){
         workThread = Thread{
             let gr5xxxDfu2: GR5xxxDFU2 = GR5xxxDFU2()
             let blockBle = BlockingBLE()
             do{
                 blockBle.setLog(log: self.log)
                 gr5xxxDfu2.setLog(log: self.log)
-                try blockBle.initCentral(central)
-                try blockBle.connectPeripheral(targetDevice: targetDevice)
+                try blockBle.initCentral(nil)
+                try blockBle.retrievePeripherals(targetDevice: peripheralUUID)
                 try blockBle.discoverServices()
                 try gr5xxxDfu2.bondTo(blockingBle: blockBle)
                 
-                if dfuMode == 0{
-                    try gr5xxxDfu2.updateFirmware(dfuData: dfuData, isCopyMode: false, copyAddress: 0, isFastMode: self.isFastMode, listener: self.listener, ctrlCmd: self.ctrlCmd, reconnectScanFilter: self.reconnectScanFilter)
-                }else if dfuMode == 1{
-                    try gr5xxxDfu2.updateFirmware(dfuData: dfuData, isCopyMode: true, copyAddress: address, isFastMode: self.isFastMode, listener: self.listener, ctrlCmd: self.ctrlCmd)
-                }else if dfuMode == 2{
-                    try gr5xxxDfu2.updateResource(dfuData: dfuData, startAddress: address, isFastMode: self.isFastMode, isExtFlash: isExtFlash, listener: self.listener, ctrlCmd: self.ctrlCmd)
-                }else if dfuMode == 3{
-                    //发送命令跳转到Boot模式，并重连设备（BOOT模式）
-                    try gr5xxxDfu2.setDfuEnter()
-                    Thread.sleep(forTimeInterval: 0.2)
-                    try blockBle.disconnectPeripheral()
-                    Thread.sleep(forTimeInterval: 0.2)
-                    if let filter = self.reconnectScanFilter {
-                        try blockBle.connectPeripheral(timeout: 10_000, filter: filter)
-                    }else{
-                        //警告：因IOS不能取得蓝牙地址，所以重连时是依据DFU BOOT模式时的默认设备名连接的，这里是不可靠的。
-                        try blockBle.connectPeripheral(timeout: 10_000, deviceName: "Goodix_DFU")
-                    }
-                    try blockBle.discoverServices()
-                    try gr5xxxDfu2.bondTo(blockingBle: blockBle)
-                    
-                    try gr5xxxDfu2.updateFirmware(dfuData: dfuData, isCopyMode: false, copyAddress: 0, isFastMode: self.isFastMode, listener: self.listener, ctrlCmd: self.ctrlCmd, reconnectScanFilter: nil)
-                }
-                
+                try gr5xxxDfu2.updateFirmware(dfuData: dfuData, isCopyMode: true, isFastMode: self.isFastMode, listener: self.listener, ctrlCmd: self.ctrlCmd)
                 try blockBle.disconnectPeripheral()
                 
             }
